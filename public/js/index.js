@@ -12,3 +12,8 @@ socket.on('disconnect', function(){
 socket.on('newMessage', function(messageData){
   console.log('New message recieved', messageData);
 })
+
+
+socket.on('newUserMessage', function(message){
+  console.log('new user joined', message)
+});
