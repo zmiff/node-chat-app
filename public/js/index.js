@@ -9,6 +9,21 @@ socket.on('disconnect', function(){
 });
 
 //eventlistener newMessage.
-socket.on('newMessage', function(messageData){
-  console.log('New message recieved', messageData);
+socket.on('newMessage', function(message){
+  console.log('New message recieved', message);
+  var li = $('<li></li>');
+  li.text(`${message.from}: ${message.text}`);
+  $('#messages').append(li);
 })
+
+
+$('#messageForm').on('submit', function(e){
+  e.preventDefault();
+
+  socket.emit('createMessage',{
+    from: 'User' ,
+    text: $('[name=message]').val()
+  },function(){
+
+  });
+});
