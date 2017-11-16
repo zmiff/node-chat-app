@@ -4,6 +4,7 @@ const http = require('http');
 const socketIO = require('socket.io');
 
 const {generateMessage, generateLocationMessage} = require('./utils/message');
+const {isRealString} = require('./utils/validation.js');
 const publicPath = path.join(__dirname, '../public');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -12,14 +13,30 @@ var io = socketIO(server);
 
 app.use(express.static(publicPath));
 
-io.on('connection', (socket)=>{
-  console.log('New user connected');
+io.on('connection', (socket)=>{console.log('New user connected');
 
-//emit welcome from admin
-  socket.emit('newMessage', generateMessage('Admin', 'Welcome to the chat room'));
 
-//broadcast new user joined
-  socket.broadcast.emit('newMessage', generateMessage('Admin', 'New user joind'))
+  socket.on('join', (params, callback)=>{
+    if(!isRealString(params.name) || !isRealString(params.room)){
+      callback('name and room name are required');
+    }
+
+    socket.join(params.room); //join chat room with name of params.room
+
+
+    //socket.leave('room name');
+    //io.emit emits to everybody
+    //socket.broadcast.emit emits to everyone except to current user
+    //socket.emit emit event to specificily one user
+    //io.to('roomName').emit() emits to everyone in room 'to' can also be used on tbroadcast and io.emit
+
+    //broadcast new user joined
+    socket.broadcast.to(params.room).emit('newMessage', generateMessage('Admin', `${params.name} has joined the chat`));
+    //emit welcome from admin
+    socket.emit('newMessage', generateMessage('Admin', 'Welcome to the chat room'));
+
+    callback();
+  });
 
   //socket.on createMessage
   socket.on('createMessage', function(message, callback){
