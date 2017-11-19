@@ -5,11 +5,13 @@ const socketIO = require('socket.io');
 
 const {generateMessage, generateLocationMessage} = require('./utils/message');
 const {isRealString} = require('./utils/validation.js');
+const {Users} = require('./utils/users.js');
 const publicPath = path.join(__dirname, '../public');
 const app = express();
 const port = process.env.PORT || 3000;
 var server = http.createServer(app);
 var io = socketIO(server);
+var users = new Users();
 
 app.use(express.static(publicPath));
 
@@ -18,18 +20,14 @@ io.on('connection', (socket)=>{console.log('New user connected');
 
   socket.on('join', (params, callback)=>{
     if(!isRealString(params.name) || !isRealString(params.room)){
-      callback('name and room name are required');
+      return callback('name and room name are required');
     }
 
     socket.join(params.room); //join chat room with name of params.room
+    users.removeUser(socket.id);//first remove user if alrady exists to prevent dubplicates
+    users.addUser(socket.id, params.name, params.room);//addUser to room
 
-
-    //socket.leave('room name');
-    //io.emit emits to everybody
-    //socket.broadcast.emit emits to everyone except to current user
-    //socket.emit emit event to specificily one user
-    //io.to('roomName').emit() emits to everyone in room 'to' can also be used on tbroadcast and io.emit
-
+    io.to(params.room).emit('updateUserList', users.getUserList(params.room));
     //broadcast new user joined
     socket.broadcast.to(params.room).emit('newMessage', generateMessage('Admin', `${params.name} has joined the chat`));
     //emit welcome from admin
@@ -50,7 +48,12 @@ io.on('connection', (socket)=>{console.log('New user connected');
   })
 
   socket.on('disconnect',()=>{
-    console.log('Client disconnected');
+    var user = users.removeUser(socket.id);
+
+    if(user){
+      io.to(user.room).emit('updateUserList', users.getUserList(user.room));
+      io.to(user.room).emit('newMessage', generateMessage('Admin', `${user.name} has left the chat.`));
+    }
   });
 });
 
